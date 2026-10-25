@@ -16,6 +16,7 @@ import { UI, fmt } from './strings';
 import { Floaters } from './ui/floaters';
 import { addMissing, expandBar, fillExtraRows, slotShown } from './ui/bars';
 import { Hud } from './ui/hud';
+import { SpecPanelView } from './ui/spec-panel';
 import { SettingsDialog, claimKey, defaultPrefs, type Prefs } from './ui/settings';
 import { raidPicker } from './ui/raid-picker';
 import { DISCLAIMER_SHORT_HTML } from './ui/disclaimer';
@@ -255,6 +256,16 @@ hud.setTargetCount(prefs.targets);
 hud.setMeterVisible(prefs.meter);
 hud.setSuggestions(prefs.suggest);
 
+// The spec's main-screen panel (what-if rules): a change saves, resets the fight and keeps Settings in step.
+const specPanel = spec.panel ? new SpecPanelView(spec, combat, (changes) => {
+  for (const [k, v] of Object.entries(changes)) { if (v === null) delete prefs.options[k]; else prefs.options[k] = v; }
+  persist();
+  fullReset();
+  settings.setPrefs(prefs);
+  specPanel?.refresh();
+}) : null;
+if (specPanel) hud.addPanel(specPanel.el);
+
 const floaters = new Floaters(app, world.camera);
 
 const settings = new SettingsDialog(app, spec, prefs, combat, (what) => {
@@ -283,6 +294,7 @@ const settings = new SettingsDialog(app, spec, prefs, combat, (what) => {
   hud.setSuggestions(prefs.suggest);
   controls.bindings = prefs.move;
   hud.refreshBar();
+  specPanel?.refresh();
   persist();
 });
 

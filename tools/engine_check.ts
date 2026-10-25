@@ -372,6 +372,36 @@ for (const sp of [druidCat, druidBear, druidBalance]) {
   if (!(real.used.innervate > 0 && real.used.manaPotion > 0)) failures.push('Balance never used Innervate or a mana potion');
 }
 
+// What-if Eclipse styles: each one plays its own hint and its own Eclipse.
+{
+  const STYLE_MUST: Record<string, { spells: string[]; counter?: string }> = {
+    stackDump: { spells: ['wrath', 'starfire'], counter: 'eclipseStarfires' },
+    alternating: { spells: ['wrath', 'starfire'], counter: 'eclipses' },
+    solarFocus: { spells: ['wrath'], counter: 'uptime:solarFocus' },
+    lunarFocus: { spells: ['starfire'], counter: 'uptime:lunarFocus' },
+    none: { spells: ['starfire'] },
+  };
+  const row: string[] = [];
+  for (const [eclipseStyle, must] of Object.entries(STYLE_MUST)) {
+    const r = play(druidBalance, { build: 'moonkin', options: { eclipseStyle, lockMana: true } });
+    row.push(`${eclipseStyle} ${r.c.dps().toFixed(0)}`);
+    const missing = must.spells.filter((id) => !r.used[id]);
+    if (missing.length) failures.push(`Balance what-if ${eclipseStyle} never used ${missing.join(', ')}`);
+    if (must.counter && !(r.c.counters[must.counter] > 0)) failures.push(`Balance what-if ${eclipseStyle}: no ${must.counter}`);
+    if (!(r.c.dps() > 100)) failures.push(`Balance what-if ${eclipseStyle}: ${r.c.dps().toFixed(0)} DPS`);
+  }
+  if (!(play(druidBalance, { build: 'moonkin', options: { eclipseStyle: 'solarFocus' } }).used.starfire === undefined)) failures.push('Solar Focus hint cast Starfire');
+  console.log(`Balance what-if Eclipse styles (locked mana): ${row.join(', ')}`);
+  // A Wrath crit gives double: more charges reach each Starfire (Starfire at 3, so 2 + 2 can overshoot).
+  const perStarfire = (critDouble: number) => {
+    const k = play(druidBalance, { build: 'moonkin', options: { eclipseStyle: 'stackDump', 'wi.stackDump.critDouble': critDouble, lockMana: true } }).c.counters;
+    return (k.dumpedCharges ?? 0) / (k.eclipseStarfires ?? 1);
+  };
+  const [single, double] = [perStarfire(0), perStarfire(1)];
+  console.log(`Banked charges per Starfire: ${single.toFixed(2)}, with double on a Wrath crit ${double.toFixed(2)}`);
+  if (!(double > single)) failures.push('a Wrath crit giving double did not add charges');
+}
+
 // ---------------------------------------------------------------- paladin
 console.log('Paladin builds (5 min, own gear, priority list, default raid buffs):');
 const PALADIN_MUST_USE: Record<string, string[]> = {

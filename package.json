@@ -12,7 +12,8 @@
     "model": "node tools/build_model.mjs",
     "icons": "node tools/icons.mjs && node tools/wow_icons.mjs",
     "talents": "node tools/talent_layout.mjs",
-    "test": "esbuild tools/engine_check.ts --bundle --platform=node --format=esm --log-level=warning --outfile=node_modules/.cache/engine_check.mjs && node node_modules/.cache/engine_check.mjs"
+    "test": "esbuild tools/engine_check.ts --bundle --platform=node --format=esm --log-level=warning --outfile=node_modules/.cache/engine_check.mjs && node node_modules/.cache/engine_check.mjs",
+    "whatif": "esbuild tools/whatif.ts --bundle --platform=node --format=esm --log-level=warning --outfile=node_modules/.cache/whatif.mjs && node node_modules/.cache/whatif.mjs"
   },
   "dependencies": {
     "three": "^0.180.0"

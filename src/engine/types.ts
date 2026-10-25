@@ -259,6 +259,16 @@ export interface SettingField {
   step?: number;
 }
 
+/** A panel on the main screen (what-if rules): text, then fields that write the spec's options. */
+export interface SpecPanel {
+  title: string;
+  text: string[];
+  /** `group` starts a new heading before the field. */
+  fields: (SettingField & { value: number | string; group?: string })[];
+  /** Options the Defaults button clears. */
+  resetKeys: string[];
+}
+
 export interface Spec {
   id: string;
   className: string;
@@ -292,6 +302,8 @@ export interface Spec {
   chances?: (c: Combat) => { title: string; rows: [string, string][] }[];
   /** Short rotation review in the rotation panel. `good` colors the value. */
   review?: (c: Combat) => { label: string; value: string; good?: boolean }[];
+  /** A panel on the main screen, rebuilt after each change. */
+  panel?: (c: Combat) => SpecPanel;
   /** Extra class options (talents that can be toggled, poisons…). */
   options?: SettingField[];
   defaultOptions?: Record<string, number | boolean | string>;

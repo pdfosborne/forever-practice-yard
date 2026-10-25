@@ -279,6 +279,9 @@ export class Hud {
     this.refreshBar();
   }
 
+  /** A spec's main-screen panel, under the buttons on the left. */
+  addPanel(el: HTMLElement): void { this.root.querySelector('.hud-left')!.append(el); }
+
   setMeterVisible(on: boolean): void { this.meter.style.display = on ? '' : 'none'; }
 
   /** Shows action bar rows 3 and 4 when asked for. */

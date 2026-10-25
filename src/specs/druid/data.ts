@@ -95,4 +95,16 @@ export const DATA = {
   naturesGrace: { haste: 0.1, gcd: 0.9, duration: 3 },
   eclipse: { maxCharges: 4, duration: 15 },
   spellMiss: 17,
+  // What-if Eclipse styles: hypothetical, not in Forever. Each one replaces the Eclipse talent (3/3) and every
+  // value can be changed on the main screen. cast in seconds, damage and crit in percent, per charge or stack;
+  // critDouble 1: a Wrath crit gives twice the charges or stacks.
+  whatIf: {
+    // Wrath banks charges, one Starfire spends them all.
+    stackDump: { perWrath: 1, critDouble: 0, maxCharges: 5, duration: 15, cast: 0.3, damage: 10, crit: 0, dumpAt: 3 },
+    // Wrath of the Lich King: a Wrath crit may give Lunar (buffs Starfire), a Starfire crit gives Solar (buffs Wrath).
+    alternating: { lunarChance: 60, lunarCast: 0, lunarDamage: 0, lunarCrit: 40, solarChance: 100, solarCast: 0, solarDamage: 40, solarCrit: 0, duration: 15, icd: 30 },
+    // Mono-spell talents: consecutive casts of one spell stack a bonus, the other spell breaks it.
+    solarFocus: { critDouble: 0, maxStacks: 5, duration: 10, cast: 0, damage: 4, crit: 0 },
+    lunarFocus: { baseCast: 0.5, maxStacks: 5, duration: 10, cast: 0, damage: 3, crit: 0, mana: 5 },
+  },
 };
