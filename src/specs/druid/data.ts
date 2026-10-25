@@ -103,6 +103,8 @@ export const DATA = {
     stackDump: { perWrath: 1, critDouble: 0, maxCharges: 5, duration: 15, cast: 0.3, damage: 10, crit: 0, dumpAt: 3 },
     // Wrath of the Lich King: a Wrath crit may give Lunar (buffs Starfire), a Starfire crit gives Solar (buffs Wrath).
     alternating: { lunarChance: 60, lunarCast: 0, lunarDamage: 0, lunarCrit: 40, solarChance: 100, solarCast: 0, solarDamage: 40, solarCrit: 0, duration: 15, icd: 30 },
+    // Starfire empowers Wrath: each charge makes one Wrath fire several bolts at reduced power (power in percent per bolt).
+    twinWrath: { perStarfire: 2, maxCharges: 4, duration: 15, bolts: 2, power: 60 },
     // Mono-spell talents: consecutive casts of one spell stack a bonus, the other spell breaks it.
     solarFocus: { critDouble: 0, maxStacks: 5, duration: 10, cast: 0, damage: 4, crit: 0 },
     lunarFocus: { baseCast: 0.5, maxStacks: 5, duration: 10, cast: 0, damage: 3, crit: 0, mana: 5 },

@@ -30,7 +30,7 @@ function play(options: Record<string, number | boolean | string>, seed: number) 
 const avg = (options: Record<string, number | boolean | string>) =>
   SEEDS.reduce((a, seed) => a + play(options, seed).dps(), 0) / SEEDS.length;
 
-const STYLES = ['forever', 'stackDump', 'alternating', 'solarFocus', 'lunarFocus', 'none'];
+const STYLES = ['forever', 'stackDump', 'twinWrath', 'alternating', 'solarFocus', 'lunarFocus', 'none'];
 const FILLERS = ['priority', 'wrath', 'starfire'];
 
 console.log(`Moonkin 38/0/13, ${SECONDS / 60} min, ${SEEDS.length} seeds. DPS with real mana (locked mana)`);
@@ -58,3 +58,7 @@ console.log('A Wrath crit gives double charges or stacks');
 show('Forever beta', { eclipseStyle: 'forever', 'wi.forever.critDouble': 1 });
 show('Banked charges, Starfire at 3', dump({ critDouble: 1 }));
 show('Wrath-only talent', { eclipseStyle: 'solarFocus', 'wi.solarFocus.critDouble': 1 });
+console.log('Starfire empowers Wrath: bolts x power per bolt');
+for (const [bolts, power] of [[2, 60], [2, 50], [2, 70], [3, 40]]) {
+  show(`${bolts} bolts at ${power}%`, { eclipseStyle: 'twinWrath', 'wi.twinWrath.bolts': bolts, 'wi.twinWrath.power': power });
+}

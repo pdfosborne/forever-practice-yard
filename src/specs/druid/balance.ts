@@ -95,7 +95,7 @@ const eclipseCut = (c: Combat) => [0, 0.17, 0.33, 0.5][T(c).eclipse];
 // Hypothetical Eclipse styles, picked on the main screen: each replaces what
 // the Eclipse talent does ('forever' is the beta's). Defaults in data.ts →
 // whatIf; the player can change every value (options 'wi.<style>.<key>').
-const STYLES = ['forever', 'stackDump', 'alternating', 'solarFocus', 'lunarFocus', 'none'] as const;
+const STYLES = ['forever', 'stackDump', 'twinWrath', 'alternating', 'solarFocus', 'lunarFocus', 'none'] as const;
 type Style = (typeof STYLES)[number];
 const W = D.whatIf;
 function style(c: Combat): Style {
@@ -106,7 +106,7 @@ const stacksOf = (c: Combat, id: string) => c.aura(c.player, id)?.stacks ?? 0;
 
 const DEFAULTS: Record<Style, Record<string, number>> = {
   forever: { perWrath: D.wrath.eclipseCharges, critDouble: 0, maxCharges: D.eclipse.maxCharges, duration: D.eclipse.duration, cast: 0.5, damage: 0, crit: 0 },
-  stackDump: W.stackDump, alternating: W.alternating, solarFocus: W.solarFocus, lunarFocus: W.lunarFocus, none: {},
+  stackDump: W.stackDump, twinWrath: W.twinWrath, alternating: W.alternating, solarFocus: W.solarFocus, lunarFocus: W.lunarFocus, none: {},
 };
 const optionKey = (s: Style, key: string) => `wi.${s}.${key}`;
 /** A what-if value: the player's own, or the default. */
@@ -164,6 +164,13 @@ function addStack(c: Combat, s: Style, id: string, name: string, icon: string, n
 /** Charges or stacks from a Wrath: doubled on a crit when the toggle is on. */
 const wrathStacks = (c: Combat, s: Style, n: number, outcome: Outcome) => (outcome === 'crit' && tw(c, s, 'critDouble') ? 2 * n : n);
 
+const twinCharges = (c: Combat) => stacksOf(c, 'twinWrath');
+/** How many bolts the next Wrath fires and the power of each (Starfire empowers Wrath). */
+function wrathBolts(c: Combat): { n: number; power: number } {
+  if (style(c) !== 'twinWrath' || !twinCharges(c)) return { n: 1, power: 1 };
+  return { n: Math.max(1, Math.round(tw(c, 'twinWrath', 'bolts'))), power: tw(c, 'twinWrath', 'power') / 100 };
+}
+
 /** Alternating: Lunar after a Wrath crit, Solar after a Starfire crit; own cooldown each, never both at once. */
 function procEclipse(c: Combat, which: 'lunar' | 'solar', outcome: Outcome): void {
   const s = wi(c);
@@ -185,6 +192,14 @@ function wrathEclipse(c: Combat, outcome: Outcome): void {
     case 'stackDump': {
       const stacks = Math.min(tw(c, s, 'maxCharges'), eclipseCharges(c) + wrathStacks(c, s, tw(c, s, 'perWrath'), outcome));
       c.applyAura(c.player, { id: 'eclipse', name: 'Eclipse', icon: 'eclipse', duration: tw(c, s, 'duration'), stacks });
+      return;
+    }
+    case 'twinWrath': {
+      const a = c.aura(c.player, 'twinWrath');
+      c.count('wrathsCast');
+      if (!a) return;
+      c.count('empoweredWraths');
+      if ((a.stacks ?? 1) <= 1) c.removeAura(c.player, 'twinWrath'); else a.stacks = (a.stacks ?? 1) - 1;
       return;
     }
     case 'alternating': procEclipse(c, 'lunar', outcome); return;
@@ -210,6 +225,9 @@ function starfireEclipse(c: Combat, outcome: Outcome): void {
       c.count('dumpedCharges', ec.stacks ?? 1);
       c.removeAura(c.player, 'eclipse');
       return;
+    case 'twinWrath':
+      c.applyAura(c.player, { id: 'twinWrath', name: 'Empowered Wrath', icon: 'wrath', duration: tw(c, s, 'duration'), stacks: Math.min(tw(c, s, 'maxCharges'), twinCharges(c) + tw(c, s, 'perStarfire')) });
+      return;
     case 'alternating': procEclipse(c, 'solar', outcome); return;
     case 'solarFocus': c.removeAura(c.player, 'solarFocus'); return;
     case 'lunarFocus': addStack(c, s, 'lunarFocus', 'Lunar Focus', 'starfire'); return;
@@ -221,6 +239,7 @@ function starfireEclipse(c: Combat, outcome: Outcome): void {
 const STYLE_NAMES: Record<Style, string> = {
   forever: 'Forever beta',
   stackDump: 'Wrath banks charges, one Starfire spends all',
+  twinWrath: 'Starfire empowers Wrath (several bolts)',
   alternating: 'Lunar / Solar procs (Wrath of the Lich King)',
   solarFocus: 'Mono-spell talent: Wrath only (Solar Focus)',
   lunarFocus: 'Mono-spell talent: Starfire only (Lunar Focus)',
@@ -240,6 +259,10 @@ const TWEAKS: Record<Style, { group: string; fields: TweakField[] }[]> = {
     { group: 'Wrath gives', fields: [['perWrath', 'Charges per Wrath', 1], CRIT_DOUBLE, ['maxCharges', 'Max charges', 1], ['duration', 'Duration, sec', 1]] },
     { group: 'Starfire spends every charge for', fields: TRIO('charge') },
     { group: 'Rotation hint', fields: [['dumpAt', 'Starfire at this many charges', 1]] },
+  ],
+  twinWrath: [
+    { group: 'Starfire gives', fields: [['perStarfire', 'Charges per Starfire', 1], ['maxCharges', 'Max charges', 1], ['duration', 'Duration, sec', 1]] },
+    { group: 'Each Wrath spends 1 charge to fire', fields: [['bolts', 'Bolts', 1], ['power', 'Power per bolt, %', 5]] },
   ],
   alternating: [
     { group: 'Lunar Eclipse (Wrath crit), buffs Starfire', fields: [['lunarChance', 'Chance on a Wrath crit, %', 5], ['lunarCast', 'Cast time, sec faster', 0.1], ['lunarDamage', 'Damage, %', 5], ['lunarCrit', 'Crit chance, %', 5]] },
@@ -270,6 +293,7 @@ function styleText(c: Combat, s: Style = style(c)): string {
   switch (s) {
     case 'forever': return `Forever beta: each Wrath gives ${v('perWrath')} charges${crit} (max ${v('maxCharges')}, ${v('duration')} sec); each Starfire spends one: ${trio()}.`;
     case 'stackDump': return `What-if: each Wrath banks ${v('perWrath')} charge${crit} (max ${v('maxCharges')}, ${v('duration')} sec); the next Starfire spends them all, per charge: ${trio()}. At ${v('maxCharges')} charges: ${trio(v('maxCharges'))}.`;
+    case 'twinWrath': return `What-if: each Starfire gives ${v('perStarfire')} charges (max ${v('maxCharges')}, ${v('duration')} sec); each Wrath spends one to fire ${v('bolts')} bolts at ${v('power')}% power (${Math.round(v('bolts') * v('power'))}% of a Wrath in all), each rolling hit and crit on its own.`;
     case 'alternating': return `What-if (Wrath of the Lich King): a Wrath crit has a ${v('lunarChance')}% chance of Lunar Eclipse (Starfire: ${trio(1, 'lunar')}); a Starfire crit has a ${v('solarChance')}% chance of Solar Eclipse (Wrath: ${trio(1, 'solar')}). ${v('duration')} sec each, ${v('icd')} sec cooldown, never both at once.`;
     case 'solarFocus': return `What-if talent, Wrath only: each Wrath gives a stack of Solar Focus${crit} (max ${v('maxStacks')}, ${v('duration')} sec), per stack Wrath gets ${trio()}; at ${v('maxStacks')}: ${trio(v('maxStacks'))}. A Starfire clears it.`;
     case 'lunarFocus': return `What-if talent, Starfire only: Starfire is ${v('baseCast')} sec faster; each Starfire gives a stack of Lunar Focus (max ${v('maxStacks')}, ${v('duration')} sec), per stack: ${trio()} and ${v('mana')}% less mana. A Wrath clears it.`;
@@ -279,6 +303,7 @@ function styleText(c: Combat, s: Style = style(c)): string {
 const HINT_TEXT: Record<Style, string> = {
   forever: 'Wrath, then Starfire while you have a charge (Wrath - Starfire - Starfire).',
   stackDump: 'Wrath until the charges reach the number below, then one Starfire.',
+  twinWrath: 'Starfire, then Wrath while you have a charge (Starfire - Wrath - Wrath).',
   alternating: 'Starfire in Lunar, Wrath in Solar; between them, cast the spell that can proc the other Eclipse.',
   solarFocus: 'Wrath only, after the DoTs.',
   lunarFocus: 'Starfire only, Wrath when Starfire is out of reach.',
@@ -329,9 +354,15 @@ const abilities: Ability[] = [
     use: (c, t) => {
       const u = t!;
       const w = D.wrath;
-      const base = w.min + c.random() * (w.max - w.min) + w.coeff * spellPower(c);
       const b = boost(c, 'wrath');
-      const outcome = directSpell(c, u, 'wrath', 'nature', base, { delay: c.distance(u) / (20 * YARD), mult: 1 + b.damage / 100, extraCrit: b.crit });
+      const bolts = wrathBolts(c);
+      // Several bolts (Starfire empowers Wrath) each roll on their own; a crit on any counts for the procs.
+      let outcome: Outcome = 'resist';
+      for (let i = 0; i < bolts.n; i++) {
+        const base = w.min + c.random() * (w.max - w.min) + w.coeff * spellPower(c);
+        const o = directSpell(c, u, 'wrath', 'nature', base, { delay: c.distance(u) / (20 * YARD) + 0.15 * i, mult: (1 + b.damage / 100) * bolts.power, extraCrit: b.crit });
+        if (i === 0 || o === 'crit') outcome = o;
+      }
       wrathEclipse(c, outcome);
       afterCast(c, wrathCast(c));
     },
@@ -472,6 +503,7 @@ function suggest(c: Combat): string | null {
       if (solar(c)) return 'wrath';
       // Between Eclipses: fish for the other one.
       return wi(c).last === 'lunar' ? starfire : 'wrath';
+    case 'twinWrath': return twinCharges(c) >= 1 ? 'wrath' : starfire;
     case 'solarFocus': return 'wrath';
     default: return starfire;
   }
@@ -526,6 +558,7 @@ function review(c: Combat): { label: string; value: string; good?: boolean }[] {
   if (T(c).insectSwarm) rows.push({ label: 'Insect Swarm uptime', value: pctOf(uptime('uptime:target:insectSwarm')), good: uptime('uptime:target:insectSwarm') >= 0.85 });
   const st = style(c);
   if (st === 'forever') rows.push({ label: 'Starfires with Eclipse', value: starfires ? `${k.eclipseStarfires ?? 0} of ${starfires}` : '-', good: starfires === 0 || (k.eclipseStarfires ?? 0) / starfires >= 0.9 });
+  if (st === 'twinWrath') rows.push({ label: 'Empowered Wraths', value: k.wrathsCast ? `${k.empoweredWraths ?? 0} of ${k.wrathsCast}` : '-' });
   if (st === 'stackDump') rows.push({ label: 'Charges per Starfire', value: k.eclipseStarfires ? ((k.dumpedCharges ?? 0) / k.eclipseStarfires).toFixed(1) : '-' });
   if (st === 'alternating') {
     rows.push({ label: 'Lunar / Solar Eclipse uptime', value: `${pctOf(uptime('uptime:lunarEclipse'))} / ${pctOf(uptime('uptime:solarEclipse'))}` });

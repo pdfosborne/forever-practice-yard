@@ -2,7 +2,7 @@
 
 > **What-if fork: Balance druid Eclipse.** This fork of [Argorlant/forever-practice-yard](https://github.com/Argorlant/forever-practice-yard)
 > adds a *What-if Eclipse* panel to the Balance druid (`?class=druid-balance`): try hypothetical Eclipse styles (Wrath banks
-> charges that one Starfire spends, Lunar/Solar procs, Wrath-only and Starfire-only talents) and change what each charge or stack
+> charges that one Starfire spends, Starfire empowering Wrath with extra bolts, Lunar/Solar procs, Wrath-only and Starfire-only talents) and change what each charge or stack
 > gives (cast time, damage, crit). These styles and their numbers are invented to explore possible class changes; they are
 > not in WoW Forever. `npm run whatif` compares the rotations in a headless sim. For the original yard, see
 > https://argorlant.github.io/forever-practice-yard/.
