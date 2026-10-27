@@ -377,6 +377,7 @@ for (const sp of [druidCat, druidBear, druidBalance]) {
   const STYLE_MUST: Record<string, { spells: string[]; counter?: string }> = {
     stackDump: { spells: ['wrath', 'starfire'], counter: 'eclipseStarfires' },
     twinWrath: { spells: ['wrath', 'starfire'], counter: 'empoweredWraths' },
+    starfireCd: { spells: ['wrath', 'starfire'] },
     alternating: { spells: ['wrath', 'starfire'], counter: 'eclipses' },
     solarFocus: { spells: ['wrath'], counter: 'uptime:solarFocus' },
     lunarFocus: { spells: ['starfire'], counter: 'uptime:lunarFocus' },

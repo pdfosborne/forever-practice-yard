@@ -95,7 +95,7 @@ const eclipseCut = (c: Combat) => [0, 0.17, 0.33, 0.5][T(c).eclipse];
 // Hypothetical Eclipse styles, picked on the main screen: each replaces what
 // the Eclipse talent does ('forever' is the beta's). Defaults in data.ts →
 // whatIf; the player can change every value (options 'wi.<style>.<key>').
-const STYLES = ['forever', 'stackDump', 'twinWrath', 'alternating', 'solarFocus', 'lunarFocus', 'none'] as const;
+const STYLES = ['forever', 'stackDump', 'twinWrath', 'starfireCd', 'alternating', 'solarFocus', 'lunarFocus', 'none'] as const;
 type Style = (typeof STYLES)[number];
 const W = D.whatIf;
 function style(c: Combat): Style {
@@ -106,7 +106,7 @@ const stacksOf = (c: Combat, id: string) => c.aura(c.player, id)?.stacks ?? 0;
 
 const DEFAULTS: Record<Style, Record<string, number>> = {
   forever: { perWrath: D.wrath.eclipseCharges, critDouble: 0, maxCharges: D.eclipse.maxCharges, duration: D.eclipse.duration, cast: 0.5, damage: 0, crit: 0 },
-  stackDump: W.stackDump, twinWrath: W.twinWrath, alternating: W.alternating, solarFocus: W.solarFocus, lunarFocus: W.lunarFocus, none: {},
+  stackDump: W.stackDump, twinWrath: W.twinWrath, starfireCd: W.starfireCd, alternating: W.alternating, solarFocus: W.solarFocus, lunarFocus: W.lunarFocus, none: {},
 };
 const optionKey = (s: Style, key: string) => `wi.${s}.${key}`;
 /** A what-if value: the player's own, or the default. */
@@ -144,6 +144,7 @@ function boost(c: Combat, id: 'wrath' | 'starfire'): Boost {
       return { ...b, cast: eclipseCut(c) * (tw(c, s, 'cast') / 0.5) };
     }
     case 'stackDump': return id === 'starfire' ? perStack(c, s, eclipseCharges(c)) : NO_BOOST;
+    case 'starfireCd': return id === 'starfire' ? perStack(c, s, 1) : NO_BOOST;
     case 'alternating':
       if (id === 'starfire' && lunar(c)) return perStack(c, s, 1, 'lunar');
       if (id === 'wrath' && solar(c)) return perStack(c, s, 1, 'solar');
@@ -240,6 +241,7 @@ const STYLE_NAMES: Record<Style, string> = {
   forever: 'Forever beta',
   stackDump: 'Wrath banks charges, one Starfire spends all',
   twinWrath: 'Starfire empowers Wrath (several bolts)',
+  starfireCd: 'Starfire on a cooldown, hits harder',
   alternating: 'Lunar / Solar procs (Wrath of the Lich King)',
   solarFocus: 'Mono-spell talent: Wrath only (Solar Focus)',
   lunarFocus: 'Mono-spell talent: Starfire only (Lunar Focus)',
@@ -263,6 +265,10 @@ const TWEAKS: Record<Style, { group: string; fields: TweakField[] }[]> = {
   twinWrath: [
     { group: 'Starfire gives', fields: [['perStarfire', 'Charges per Starfire', 1], ['maxCharges', 'Max charges', 1], ['duration', 'Duration, sec', 1]] },
     { group: 'Each Wrath spends 1 charge to fire', fields: [['bolts', 'Bolts', 1], ['power', 'Power per bolt, %', 5]] },
+  ],
+  starfireCd: [
+    { group: 'Starfire has a cooldown', fields: [['cooldown', 'Cooldown, sec', 1]] },
+    { group: 'Starfire always gets', fields: [['cast', 'Cast time, sec faster', 0.1], ['damage', 'Damage, %', 5], ['crit', 'Crit chance, %', 1]] },
   ],
   alternating: [
     { group: 'Lunar Eclipse (Wrath crit), buffs Starfire', fields: [['lunarChance', 'Chance on a Wrath crit, %', 5], ['lunarCast', 'Cast time, sec faster', 0.1], ['lunarDamage', 'Damage, %', 5], ['lunarCrit', 'Crit chance, %', 5]] },
@@ -294,6 +300,7 @@ function styleText(c: Combat, s: Style = style(c)): string {
     case 'forever': return `Forever beta: each Wrath gives ${v('perWrath')} charges${crit} (max ${v('maxCharges')}, ${v('duration')} sec); each Starfire spends one: ${trio()}.`;
     case 'stackDump': return `What-if: each Wrath banks ${v('perWrath')} charge${crit} (max ${v('maxCharges')}, ${v('duration')} sec); the next Starfire spends them all, per charge: ${trio()}. At ${v('maxCharges')} charges: ${trio(v('maxCharges'))}.`;
     case 'twinWrath': return `What-if: each Starfire gives ${v('perStarfire')} charges (max ${v('maxCharges')}, ${v('duration')} sec); each Wrath spends one to fire ${v('bolts')} bolts at ${v('power')}% power (${Math.round(v('bolts') * v('power'))}% of a Wrath in all), each rolling hit and crit on its own.`;
+    case 'starfireCd': return `What-if: Starfire has a ${v('cooldown')} sec cooldown and always gets ${trio()}; Wrath fills the rest.`;
     case 'alternating': return `What-if (Wrath of the Lich King): a Wrath crit has a ${v('lunarChance')}% chance of Lunar Eclipse (Starfire: ${trio(1, 'lunar')}); a Starfire crit has a ${v('solarChance')}% chance of Solar Eclipse (Wrath: ${trio(1, 'solar')}). ${v('duration')} sec each, ${v('icd')} sec cooldown, never both at once.`;
     case 'solarFocus': return `What-if talent, Wrath only: each Wrath gives a stack of Solar Focus${crit} (max ${v('maxStacks')}, ${v('duration')} sec), per stack Wrath gets ${trio()}; at ${v('maxStacks')}: ${trio(v('maxStacks'))}. A Starfire clears it.`;
     case 'lunarFocus': return `What-if talent, Starfire only: Starfire is ${v('baseCast')} sec faster; each Starfire gives a stack of Lunar Focus (max ${v('maxStacks')}, ${v('duration')} sec), per stack: ${trio()} and ${v('mana')}% less mana. A Wrath clears it.`;
@@ -304,6 +311,7 @@ const HINT_TEXT: Record<Style, string> = {
   forever: 'Wrath, then Starfire while you have a charge (Wrath - Starfire - Starfire).',
   stackDump: 'Wrath until the charges reach the number below, then one Starfire.',
   twinWrath: 'Starfire, then Wrath while you have a charge (Starfire - Wrath - Wrath).',
+  starfireCd: 'Starfire whenever it is off cooldown, Wrath in between.',
   alternating: 'Starfire in Lunar, Wrath in Solar; between them, cast the spell that can proc the other Eclipse.',
   solarFocus: 'Wrath only, after the DoTs.',
   lunarFocus: 'Starfire only, Wrath when Starfire is out of reach.',
@@ -372,6 +380,7 @@ const abilities: Ability[] = [
     projectile: { color: 0xe9a8ff, fromSky: true, style: 'arcane' },
     cost: starfireMana,
     castTime: starfireCast,
+    cooldown: (c) => (style(c) === 'starfireCd' ? tw(c, 'starfireCd', 'cooldown') : 0),
     highlight: (c) => eclipseCharges(c) > 0 || lunar(c),
     description: (c) => `A ${starfireCast(c).toFixed(2)} sec cast: ${D.starfire.min}-${D.starfire.max} Arcane damage plus ${D.starfire.coeff * 100}% of spell power. Eclipse: ${styleText(c)}`,
     use: (c, t) => {
@@ -490,7 +499,7 @@ function suggest(c: Combat): string | null {
   const afford = (id: string) => c.cost(c.ability(id)!) <= p.resource;
   if (tl.insectSwarm && !c.aura(t, 'insectSwarm') && afford('insectSwarm')) return 'insectSwarm';
   if (!c.aura(t, 'moonfire') && afford('moonfire')) return 'moonfire';
-  const starfire = afford('starfire') ? 'starfire' : 'wrath';
+  const starfire = afford('starfire') && ready('starfire') ? 'starfire' : 'wrath';
   // A forced filler, to compare one-spell rotations with the priority.
   const filler = String(c.options.filler ?? 'priority');
   if (filler === 'wrath') return 'wrath';
@@ -504,6 +513,7 @@ function suggest(c: Combat): string | null {
       // Between Eclipses: fish for the other one.
       return wi(c).last === 'lunar' ? starfire : 'wrath';
     case 'twinWrath': return twinCharges(c) >= 1 ? 'wrath' : starfire;
+    case 'starfireCd': return starfire;
     case 'solarFocus': return 'wrath';
     default: return starfire;
   }

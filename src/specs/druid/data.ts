@@ -105,6 +105,8 @@ export const DATA = {
     alternating: { lunarChance: 60, lunarCast: 0, lunarDamage: 0, lunarCrit: 40, solarChance: 100, solarCast: 0, solarDamage: 40, solarCrit: 0, duration: 15, icd: 30 },
     // Starfire empowers Wrath: each charge makes one Wrath fire several bolts at reduced power (power in percent per bolt).
     twinWrath: { perStarfire: 2, maxCharges: 4, duration: 15, bolts: 2, power: 60 },
+    // Starfire on a cooldown: fewer Starfires, each one stronger (cast in sec faster, damage and crit in percent).
+    starfireCd: { cooldown: 10, cast: 0, damage: 50, crit: 0 },
     // Mono-spell talents: consecutive casts of one spell stack a bonus, the other spell breaks it.
     solarFocus: { critDouble: 0, maxStacks: 5, duration: 10, cast: 0, damage: 4, crit: 0 },
     lunarFocus: { baseCast: 0.5, maxStacks: 5, duration: 10, cast: 0, damage: 3, crit: 0, mana: 5 },

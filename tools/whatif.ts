@@ -30,7 +30,7 @@ function play(options: Record<string, number | boolean | string>, seed: number) 
 const avg = (options: Record<string, number | boolean | string>) =>
   SEEDS.reduce((a, seed) => a + play(options, seed).dps(), 0) / SEEDS.length;
 
-const STYLES = ['forever', 'stackDump', 'twinWrath', 'alternating', 'solarFocus', 'lunarFocus', 'none'];
+const STYLES = ['forever', 'stackDump', 'twinWrath', 'starfireCd', 'alternating', 'solarFocus', 'lunarFocus', 'none'];
 const FILLERS = ['priority', 'wrath', 'starfire'];
 
 console.log(`Moonkin 38/0/13, ${SECONDS / 60} min, ${SEEDS.length} seeds. DPS with real mana (locked mana)`);
@@ -61,4 +61,8 @@ show('Wrath-only talent', { eclipseStyle: 'solarFocus', 'wi.solarFocus.critDoubl
 console.log('Starfire empowers Wrath: bolts x power per bolt');
 for (const [bolts, power] of [[2, 60], [2, 50], [2, 70], [3, 40]]) {
   show(`${bolts} bolts at ${power}%`, { eclipseStyle: 'twinWrath', 'wi.twinWrath.bolts': bolts, 'wi.twinWrath.power': power });
+}
+console.log('Starfire on a cooldown: cooldown x damage');
+for (const [cooldown, damage] of [[6, 25], [10, 50], [10, 75], [15, 100]]) {
+  show(`${cooldown} sec, +${damage}%`, { eclipseStyle: 'starfireCd', 'wi.starfireCd.cooldown': cooldown, 'wi.starfireCd.damage': damage });
 }
